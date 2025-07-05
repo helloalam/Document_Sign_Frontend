@@ -1,7 +1,7 @@
 import React, { useState, Fragment, useContext } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { AuthContext } from "../../components/context/AuthContext";
-import axios from "axios";
+import API from "../../utils/api";
 import { toast } from "react-toastify";
 import Loader from "../../components/layout/loader";
 
@@ -23,49 +23,49 @@ export default function LoginSignUp() {
   const handleSwitch = () => setIsLogin(!isLogin);
 
   const handleLogin = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      const { data } = await axios.post("http://localhost:5000/api/v1/login", {
-        email: loginEmail,
-        password: loginPassword,
-      });
-      localStorage.setItem("token", data.token);
-      login(data.user);
-      toast.success("Login successful!");
-      navigate("/profile");
-    } catch (err) {
-      setError(err.response?.data?.message || "Login failed");
-    } finally {
-      setLoading(false);
-    }
-  };
+  e.preventDefault();
+  setLoading(true);
+  try {
+    const { data } = await API.post("/login", {
+      email: loginEmail,
+      password: loginPassword,
+    });
+    localStorage.setItem("token", data.token);
+    login(data.user);
+    toast.success("Login successful!");
+    navigate("/profile");
+  } catch (err) {
+    setError(err.response?.data?.message || "Login failed");
+  } finally {
+    setLoading(false);
+  }
+};
 
-  const handleRegister = async (e) => {
-    e.preventDefault();
-    const formData = new FormData();
-    formData.set("name", user.name);
-    formData.set("email", user.email);
-    formData.set("password", user.password);
-    if (avatar) formData.set("avatar", avatar);
 
-    setLoading(true);
-    try {
-      const { data } = await axios.post(
-        "http://localhost:5000/api/v1/register",
-        formData,
-        { headers: { "Content-Type": "multipart/form-data" } }
-      );
-      localStorage.setItem("token", data.token);
-      login(data.user);
-      toast.success("Registered successfully!");
-      navigate("/profile");
-    } catch (err) {
-      setError(err.response?.data?.message || "Registration failed");
-    } finally {
-      setLoading(false);
-    }
-  };
+const handleRegister = async (e) => {
+  e.preventDefault();
+  const formData = new FormData();
+  formData.set("name", user.name);
+  formData.set("email", user.email);
+  formData.set("password", user.password);
+  if (avatar) formData.set("avatar", avatar);
+
+  setLoading(true);
+  try {
+    const { data } = await API.post("/register", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    localStorage.setItem("token", data.token);
+    login(data.user);
+    toast.success("Registered successfully!");
+    navigate("/profile");
+  } catch (err) {
+    setError(err.response?.data?.message || "Registration failed");
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   const handleInputChange = (e) => {
     if (e.target.name === "avatar") {

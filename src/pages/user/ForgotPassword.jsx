@@ -2,9 +2,9 @@ import React, { Fragment, useState } from "react";
 import "./ForgotPassword.css";
 import Loader from "../../components/layout/loader";
 import MailOutlineIcon from "@mui/icons-material/MailOutline";
-import axios from "axios";
 import { toast } from "react-toastify";
 import MetaData from "../../components/layout/MetaData";
+import API from "../../utils/api"; // ✅ Import your centralized axios instance
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState("");
@@ -12,21 +12,10 @@ const ForgotPassword = () => {
 
   const forgotPasswordSubmit = async (e) => {
     e.preventDefault();
-
     setLoading(true);
 
     try {
-      const config = {
-        headers: {
-          "Content-Type": "application/json",
-        },
-      };
-
-      const { data } = await axios.post(
-        "http://localhost:5000/api/v1/password/forgot",
-        { email },
-        config
-      );
+      const { data } = await API.post("/password/forgot", { email });
 
       toast.success(data.message || "Password reset link sent to your email.");
     } catch (error) {

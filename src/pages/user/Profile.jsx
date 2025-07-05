@@ -1,21 +1,20 @@
 import React, { useEffect, useState, Fragment } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import axios from "axios";
 import Loader from "../../components/layout/loader";
+import API from "../../utils/api"; // ✅ centralized axios instance
 
 export default function Profile() {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Fetch user
   useEffect(() => {
     const fetchUser = async () => {
       const token = localStorage.getItem("token");
       if (!token) return navigate("/login");
 
       try {
-        const { data } = await axios.get("http://localhost:5000/api/v1/me", {
+        const { data } = await API.get("/me", {
           headers: { Authorization: `Bearer ${token}` },
         });
         setUser(data.user);

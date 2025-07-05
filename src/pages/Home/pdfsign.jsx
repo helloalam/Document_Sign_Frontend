@@ -3,14 +3,13 @@ import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { Document, Page, pdfjs } from "react-pdf";
 import API from "../../utils/api";
+import { AuthContext } from "../../components/context/AuthContext";
 import "react-pdf/dist/esm/Page/AnnotationLayer.css";
 import "react-pdf/dist/esm/Page/TextLayer.css";
 import "react-toastify/dist/ReactToastify.css";
-import { AuthContext } from "../../components/context/AuthContext";
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
-// Signature component
 function DraggableSignature({ sig, updatePosition, deleteSignature }) {
   const dragRef = useRef(null);
   const isDraggingRef = useRef(false);
@@ -106,12 +105,16 @@ export default function PdfViewer() {
   const [containerWidth, setContainerWidth] = useState(800);
 
   useEffect(() => {
-    if (id) setPdfUrl(`https://res.cloudinary.com/dveabjyht/raw/upload/${id}`);
+    if (id) {
+      setPdfUrl(`${process.env.REACT_APP_CLOUDINARY_BASE_URL}/${id}`);
+    }
   }, [id]);
 
   useEffect(() => {
     const handleResize = () => {
-      if (containerRef.current) setContainerWidth(containerRef.current.offsetWidth);
+      if (containerRef.current) {
+        setContainerWidth(containerRef.current.offsetWidth);
+      }
     };
     handleResize();
     window.addEventListener("resize", handleResize);
@@ -140,8 +143,8 @@ export default function PdfViewer() {
 
   const addSignature = () => {
     if (!newSignature.trim()) return toast.error("Signature cannot be empty.");
-    setSignatures([
-      ...signatures,
+    setSignatures((prev) => [
+      ...prev,
       {
         id: Date.now(),
         text: newSignature,
@@ -171,11 +174,11 @@ export default function PdfViewer() {
 
     setLoading(true);
     try {
-      const originalSize = originalPageSizes[page - 1];
-      const scaleX = originalSize.width / pdfPageSize.width;
-      const scaleY = originalSize.height / pdfPageSize.height;
-
       for (const sig of signatures) {
+        const originalSize = originalPageSizes[sig.page - 1];
+        const scaleX = originalSize.width / pdfPageSize.width;
+        const scaleY = originalSize.height / pdfPageSize.height;
+
         const payload = {
           pdfUrl,
           type: "text",
@@ -189,10 +192,11 @@ export default function PdfViewer() {
           documentId: decodeURIComponent(id),
           userId: user._id,
         };
+
         await API.post(`/pdf/sign/${encodeURIComponent(id)}`, payload);
       }
 
-      toast.success("signature rejected!");
+      toast.success(`Document ${status === "signed" ? "signed" : "rejected"} successfully!`);
       navigate("/dashboard");
     } catch (err) {
       toast.error(err?.response?.data?.message || "Signing failed");
@@ -203,7 +207,7 @@ export default function PdfViewer() {
 
   return (
     <div className="flex flex-col lg:flex-row bg-gray-100 p-3 min-h-screen">
-      {/* PDF View */}
+      {/* PDF Preview */}
       <div
         ref={containerRef}
         className="relative border bg-white shadow-md overflow-auto w-full lg:w-2/3"
@@ -235,7 +239,6 @@ export default function PdfViewer() {
 
       {/* Control Panel */}
       <div className="w-full lg:w-1/3 mt-4 lg:mt-0 lg:pl-6 space-y-4">
-        {/* Signature Input */}
         <div>
           <label className="block font-medium">New Signature</label>
           <input
@@ -248,18 +251,13 @@ export default function PdfViewer() {
             <label className="text-sm text-gray-600">Preview:</label>
             <div
               className="border px-4 py-2 mt-1 rounded bg-white shadow-sm"
-              style={{
-                fontFamily,
-                fontSize,
-                minHeight: "40px",
-              }}
+              style={{ fontFamily, fontSize, minHeight: "40px" }}
             >
               {newSignature || <span className="text-gray-400">Signature will appear here</span>}
             </div>
           </div>
         </div>
 
-        {/* Font Style Selectors */}
         <div>
           <label className="block font-medium">Font Family</label>
           <select
@@ -269,15 +267,13 @@ export default function PdfViewer() {
           >
             {[
               "Arial", "Georgia", "Courier New", "Verdana", "Tahoma",
-              "Times New Roman", "Lucida Console", "Garamond",
-              "Trebuchet MS", "Impact",
-            ].map((f) => (
-              <option key={f} value={f}>
-                {f}
-              </option>
+              "Times New Roman", "Lucida Console", "Garamond", "Trebuchet MS", "Impact"
+            ].map((font) => (
+              <option key={font} value={font}>{font}</option>
             ))}
           </select>
         </div>
+
         <div>
           <label className="block font-medium">Font Size</label>
           <input
@@ -290,7 +286,6 @@ export default function PdfViewer() {
           />
         </div>
 
-        {/* Page Selector */}
         <div>
           <label className="block font-medium">Page</label>
           <select
@@ -309,7 +304,6 @@ export default function PdfViewer() {
           </select>
         </div>
 
-        {/* Add Signature */}
         <button
           onClick={addSignature}
           className="w-full bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
@@ -317,7 +311,6 @@ export default function PdfViewer() {
           Add Signature
         </button>
 
-        {/* Sign / Reject */}
         <div className="flex gap-3 pt-4">
           <button
             onClick={() => handleSign("signed")}

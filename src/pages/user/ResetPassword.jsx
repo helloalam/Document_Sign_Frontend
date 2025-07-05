@@ -5,8 +5,8 @@ import MetaData from "../../components/layout/MetaData";
 import LockOpenIcon from "@mui/icons-material/LockOpen";
 import LockIcon from "@mui/icons-material/Lock";
 import { useNavigate, useParams } from "react-router-dom";
-import axios from "axios";
 import { toast } from "react-toastify";
+import API from "../../utils/api"; // ✅ centralized axios
 
 const ResetPassword = () => {
   const navigate = useNavigate();
@@ -21,17 +21,10 @@ const ResetPassword = () => {
     setLoading(true);
 
     try {
-      const config = {
-        headers: {
-          "Content-Type": "application/json",
-        },
-      };
-
-      const { data } = await axios.put(
-        `http://localhost:5000/api/v1/password/reset/${token}`,
-        { password, confirmPassword },
-        config
-      );
+      const { data } = await API.put(`/password/reset/${token}`, {
+        password,
+        confirmPassword,
+      });
 
       toast.success(data.message || "Password Updated Successfully");
       navigate("/login");

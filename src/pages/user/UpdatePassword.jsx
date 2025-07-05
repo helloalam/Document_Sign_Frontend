@@ -6,8 +6,8 @@ import LockOpenIcon from "@mui/icons-material/LockOpen";
 import LockIcon from "@mui/icons-material/Lock";
 import VpnKeyIcon from "@mui/icons-material/VpnKey";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
 import { toast } from "react-toastify";
+import API from "../../utils/api"; // ✅ centralized axios instance
 
 const UpdatePassword = () => {
   const navigate = useNavigate();
@@ -22,29 +22,16 @@ const UpdatePassword = () => {
     setLoading(true);
 
     try {
-      const token = localStorage.getItem("token");
-
-      const config = {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-      };
-
-      const { data } = await axios.put(
-        "http://localhost:5000/api/v1/password/update",
-        {
-          oldPassword,
-          newPassword,
-          confirmPassword,
-        },
-        config
-      );
+      const { data } = await API.put("/password/update", {
+        oldPassword,
+        newPassword,
+        confirmPassword,
+      });
 
       toast.success(data.message || "Password Updated Successfully");
       navigate("/profile");
     } catch (error) {
-      toast.error(error.response?.data?.message || "Update failed");
+      toast.error(error.response?.data?.message || "Password update failed");
     } finally {
       setLoading(false);
     }

@@ -1,11 +1,11 @@
 import React, { useState, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { FaCloudUploadAlt } from "react-icons/fa";
-import axios from "axios";
 import { toast } from "react-toastify";
 import Loader from "../../components/layout/loader";
 import { AuthContext } from "../../components/context/AuthContext";
 import { motion } from "framer-motion";
+import API from "../../utils/api"; // ✅ centralized axios with env
 
 export default function Uploader() {
   const { user } = useContext(AuthContext);
@@ -32,14 +32,7 @@ export default function Uploader() {
 
     setLoading(true);
     try {
-      const { data } = await axios.post(
-        "http://localhost:5000/api/v1/pdf/upload",
-        formData,
-        {
-          headers: { "Content-Type": "multipart/form-data" },
-        }
-      );
-
+      const { data } = await API.post("/pdf/upload", formData); // ✅ use baseURL from env
       if (data?.public_id) {
         toast.success("PDF uploaded successfully!");
         navigate(`/sign/${encodeURIComponent(data.public_id)}`);

@@ -6,7 +6,7 @@ import FaceIcon from "@mui/icons-material/Face";
 import MetaData from "../../components/layout/MetaData";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-import axios from "axios";
+import API from "../../utils/api"; // ✅ use centralized Axios
 
 const UpdateProfile = () => {
   const navigate = useNavigate();
@@ -21,7 +21,6 @@ const UpdateProfile = () => {
   useEffect(() => {
     const fetchUser = async () => {
       const token = localStorage.getItem("token");
-
       if (!token) {
         toast.error("Please login first");
         navigate("/login");
@@ -29,21 +28,18 @@ const UpdateProfile = () => {
       }
 
       try {
-        const { data } = await axios.get("http://localhost:5000/api/v1/me", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
+        const { data } = await API.get("/me");
         const user = data?.user;
         if (user) {
           setName(user.name || "");
           setEmail(user.email || "");
           setAvatarPreview(user.avatar?.url || "/Profile.png");
         } else {
-          throw new Error("User data is undefined");
+          throw new Error("User data not found");
         }
       } catch (err) {
         console.error("User fetch failed:", err);
-        toast.error("Failed to load profile. Please log in again.");
+        toast.error("Failed to load profile. Please login again.");
         navigate("/login");
       } finally {
         setLoading(false);
@@ -58,24 +54,17 @@ const UpdateProfile = () => {
     e.preventDefault();
     setLoading(true);
 
-    const token = localStorage.getItem("token");
-
     try {
       const formData = new FormData();
       formData.set("name", name);
       formData.set("email", email);
-      if (avatar) {
-        formData.set("avatar", avatar);
-      }
+      if (avatar) formData.set("avatar", avatar);
 
-      await axios.put("http://localhost:5000/api/v1/me/update", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-          Authorization: `Bearer ${token}`,
-        },
+      await API.put("/me/update", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
       });
 
-      toast.success("Profile Updated Successfully");
+      toast.success("Profile updated successfully!");
       navigate("/profile");
     } catch (error) {
       toast.error(error.response?.data?.message || "Update failed");
@@ -146,6 +135,7 @@ const UpdateProfile = () => {
                     onChange={updateProfileDataChange}
                   />
                 </div>
+
                 <input
                   type="submit"
                   value="Update"

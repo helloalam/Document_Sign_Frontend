@@ -19,7 +19,7 @@ const DocumentList = ({ documents, theme }) => {
     if (!email) return toast.error("Email is required!");
 
     try {
-      const res = await fetch("http://localhost:5000/api/v1/pdf/email", {
+      const res = await fetch(`${process.env.REACT_APP_API_BASE_URL}/pdf/email`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ fileUrl: selectedFileUrl, toEmail: email }),
@@ -65,7 +65,6 @@ const DocumentList = ({ documents, theme }) => {
                 : "border-gray-200 hover:bg-gray-50"
             }`}
           >
-            {/* File Info */}
             <div className="flex items-center mb-4 sm:mb-0">
               <FileIcon className={`${theme.accent}`} size={28} />
               <div className="ml-4">
@@ -76,7 +75,6 @@ const DocumentList = ({ documents, theme }) => {
               </div>
             </div>
 
-            {/* Action Buttons */}
             <div className="flex items-center gap-3 flex-wrap">
               {doc.status === "NEEDS TO SIGN" && (
                 <button

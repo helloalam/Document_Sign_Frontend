@@ -2,8 +2,8 @@
 import axios from "axios";
 
 const API = axios.create({
-  baseURL: "http://localhost:5000/api/v1", // your backend base
-  withCredentials: false, // true only if you use cookies
+  baseURL: process.env.REACT_APP_API_BASE_URL, // ✅ use env variable
+  withCredentials: false, // set true if using cookies
 });
 
 // Attach token if stored
