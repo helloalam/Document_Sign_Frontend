@@ -23,63 +23,57 @@ export default function LoginSignUp() {
   const handleSwitch = () => setIsLogin(!isLogin);
 
   const handleLogin = async (e) => {
-  e.preventDefault();
-  setLoading(true);
-  try {
-    const { data } = await API.post("/login", {
-      email: loginEmail,
-      password: loginPassword,
-    });
-    localStorage.setItem("token", data.token);
-    login(data.user);
-    toast.success("Login successful!");
-    navigate("/profile");
-  } catch (err) {
-    setError(err.response?.data?.message || "Login failed");
-  } finally {
-    setLoading(false);
-  }
-};
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const { data } = await API.post("/login", {
+        email: loginEmail,
+        password: loginPassword,
+      });
+      localStorage.setItem("token", data.token);
+      login(data.user);
+      toast.success("Login successful!");
+      navigate("/profile");
+    } catch (err) {
+      setError(err.response?.data?.message || "Login failed");
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  const handleRegister = async (e) => {
+    e.preventDefault();
+    const formData = new FormData();
+    formData.set("name", user.name);
+    formData.set("email", user.email);
+    formData.set("password", user.password);
+    if (avatar) formData.set("avatar", avatar);
 
-const handleRegister = async (e) => {
-  e.preventDefault();
-  const formData = new FormData();
-  formData.set("name", user.name);
-  formData.set("email", user.email);
-  formData.set("password", user.password);
-  if (avatar) formData.set("avatar", avatar);
-
-  setLoading(true);
-  try {
-    const { data } = await API.post("/register", formData, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
-    localStorage.setItem("token", data.token);
-    login(data.user);
-    toast.success("Registered successfully!");
-    navigate("/profile");
-  } catch (err) {
-    setError(err.response?.data?.message || "Registration failed");
-  } finally {
-    setLoading(false);
-  }
-};
-
+    setLoading(true);
+    try {
+      const { data } = await API.post("/register", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      localStorage.setItem("token", data.token);
+      login(data.user);
+      toast.success("Registered successfully!");
+      navigate("/profile");
+    } catch (err) {
+      setError(err.response?.data?.message || "Registration failed");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleInputChange = (e) => {
-    if (e.target.name === "avatar") {
-      const file = e.target.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = () => {
-          setAvatarPreview(reader.result);
-          setAvatar(file);
-        };
-        reader.readAsDataURL(file);
-      }
+    const { name, files, value } = e.target;
+
+    if (name === "avatar" && files && files[0]) {
+      const file = files[0];
+      setAvatar(file);
+      setAvatarPreview(URL.createObjectURL(file)); // More reliable than FileReader
     } else {
-      setUser({ ...user, [e.target.name]: e.target.value });
+      setUser((prev) => ({ ...prev, [name]: value }));
     }
   };
 
@@ -94,7 +88,9 @@ const handleRegister = async (e) => {
               <button
                 onClick={handleSwitch}
                 className={`w-1/2 py-2 font-semibold transition ${
-                  isLogin ? "text-orange-500 border-b-2 border-orange-500" : "text-gray-500"
+                  isLogin
+                    ? "text-orange-500 border-b-2 border-orange-500"
+                    : "text-gray-500"
                 }`}
               >
                 Login
@@ -102,7 +98,9 @@ const handleRegister = async (e) => {
               <button
                 onClick={handleSwitch}
                 className={`w-1/2 py-2 font-semibold transition ${
-                  !isLogin ? "text-orange-500 border-b-2 border-orange-500" : "text-gray-500"
+                  !isLogin
+                    ? "text-orange-500 border-b-2 border-orange-500"
+                    : "text-gray-500"
                 }`}
               >
                 Register
@@ -195,11 +193,13 @@ const handleRegister = async (e) => {
                       src={avatarPreview}
                       alt="Preview"
                       className="w-12 h-12 rounded-full object-cover"
+                      crossOrigin="anonymous"
                     />
                     <input
                       type="file"
                       name="avatar"
                       accept="image/*"
+                      capture
                       onChange={handleInputChange}
                       className="text-sm"
                     />
