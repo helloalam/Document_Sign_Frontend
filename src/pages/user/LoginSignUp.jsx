@@ -23,58 +23,60 @@ export default function LoginSignUp() {
   const handleSwitch = () => setIsLogin(!isLogin);
 
   const handleLogin = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      const { data } = await API.post("/login", {
-        email: loginEmail,
-        password: loginPassword,
-      });
-      localStorage.setItem("token", data.token);
-      login(data.user);
-      toast.success("Login successful!");
-      navigate("/profile");
-    } catch (err) {
-      setError(err.response?.data?.message || "Login failed");
-    } finally {
-      setLoading(false);
-    }
-  };
+  e.preventDefault();
+  setLoading(true);
+  try {
+    const { data } = await API.post("/login", {
+      email: loginEmail,
+      password: loginPassword,
+    });
+    localStorage.setItem("token", data.token);
+    login(data.user);
+    toast.success("Login successful!");
+    navigate("/profile");
+  } catch (err) {
+    setError(err.response?.data?.message || "Login failed");
+  } finally {
+    setLoading(false);
+  }
+};
 
-  const handleRegister = async (e) => {
-    e.preventDefault();
-    const formData = new FormData();
-    formData.set("name", user.name);
-    formData.set("email", user.email);
-    formData.set("password", user.password);
-    if (avatar) formData.set("avatar", avatar);
 
-    setLoading(true);
-    try {
-      const { data } = await API.post("/register", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-      localStorage.setItem("token", data.token);
-      login(data.user);
-      toast.success("Registered successfully!");
-      navigate("/profile");
-    } catch (err) {
-      setError(err.response?.data?.message || "Registration failed");
-    } finally {
-      setLoading(false);
-    }
-  };
+const handleRegister = async (e) => {
+  e.preventDefault();
+  const formData = new FormData();
+  formData.set("name", user.name);
+  formData.set("email", user.email);
+  formData.set("password", user.password);
+  if (avatar) formData.set("avatar", avatar);
+
+  setLoading(true);
+  try {
+    const { data } = await API.post("/register", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    localStorage.setItem("token", data.token);
+    login(data.user);
+    toast.success("Registered successfully!");
+    navigate("/profile");
+  } catch (err) {
+    setError(err.response?.data?.message || "Registration failed");
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   const handleInputChange = (e) => {
     if (e.target.name === "avatar") {
       const file = e.target.files[0];
       if (file) {
-        setAvatar(file);
-        const objectUrl = URL.createObjectURL(file);
-        setAvatarPreview(objectUrl);
-
-        // Optional cleanup (you can also use useEffect for better management)
-        return () => URL.revokeObjectURL(objectUrl);
+        const reader = new FileReader();
+        reader.onload = () => {
+          setAvatarPreview(reader.result);
+          setAvatar(file);
+        };
+        reader.readAsDataURL(file);
       }
     } else {
       setUser({ ...user, [e.target.name]: e.target.value });
