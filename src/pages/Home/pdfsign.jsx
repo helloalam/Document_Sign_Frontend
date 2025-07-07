@@ -4,86 +4,12 @@ import { toast } from "react-toastify";
 import { Document, Page, pdfjs } from "react-pdf";
 import API from "../../utils/api";
 import { AuthContext } from "../../components/context/AuthContext";
+import DraggableResizableSignature from "./DraggableResizableSignature";
 import "react-pdf/dist/esm/Page/AnnotationLayer.css";
 import "react-pdf/dist/esm/Page/TextLayer.css";
 import "react-toastify/dist/ReactToastify.css";
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
-
-function DraggableSignature({ sig, updatePosition, deleteSignature }) {
-  const dragRef = useRef(null);
-  const isDraggingRef = useRef(false);
-  const offset = useRef({ x: 0, y: 0 });
-
-  const onMouseDown = (e) => {
-    isDraggingRef.current = true;
-    offset.current = {
-      x: e.clientX - sig.position.x,
-      y: e.clientY - sig.position.y,
-    };
-    document.addEventListener("mousemove", onMouseMove);
-    document.addEventListener("mouseup", onMouseUp);
-  };
-
-  const onMouseMove = (e) => {
-    if (!isDraggingRef.current) return;
-    updatePosition(sig.id, {
-      x: e.clientX - offset.current.x,
-      y: e.clientY - offset.current.y,
-    });
-  };
-
-  const onMouseUp = () => {
-    isDraggingRef.current = false;
-    document.removeEventListener("mousemove", onMouseMove);
-    document.removeEventListener("mouseup", onMouseUp);
-  };
-
-  return (
-    <div
-      ref={dragRef}
-      onMouseDown={onMouseDown}
-      style={{
-        position: "absolute",
-        left: sig.position.x,
-        top: sig.position.y,
-        cursor: "move",
-        zIndex: 10,
-        fontSize: sig.fontSize,
-        fontFamily: sig.fontFamily,
-        background: "#fff",
-        padding: "4px 10px",
-        border: "1px dashed #888",
-        boxShadow: "0 2px 4px rgba(0,0,0,0.15)",
-        display: "flex",
-        alignItems: "center",
-      }}
-    >
-      {sig.text}
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          deleteSignature(sig.id);
-        }}
-        style={{
-          marginLeft: 8,
-          background: "red",
-          color: "white",
-          border: "none",
-          borderRadius: "50%",
-          width: 20,
-          height: 20,
-          lineHeight: "20px",
-          fontSize: 12,
-          cursor: "pointer",
-        }}
-        title="Delete signature"
-      >
-        ✕
-      </button>
-    </div>
-  );
-}
 
 export default function PdfViewer() {
   const { id } = useParams();
@@ -152,6 +78,7 @@ export default function PdfViewer() {
         fontFamily,
         page,
         position: { x: 50, y: 50 },
+        size: { width: 120, height: 40 }, // initial, will auto-fit after mount
       },
     ]);
     setNewSignature("");
@@ -160,6 +87,12 @@ export default function PdfViewer() {
   const updateSignaturePosition = (id, position) => {
     setSignatures((prev) =>
       prev.map((sig) => (sig.id === id ? { ...sig, position } : sig))
+    );
+  };
+
+  const updateSignatureSize = (id, size) => {
+    setSignatures((prev) =>
+      prev.map((sig) => (sig.id === id ? { ...sig, size } : sig))
     );
   };
 
@@ -187,6 +120,8 @@ export default function PdfViewer() {
           fontFamily: sig.fontFamily,
           x: Math.round(sig.position.x * scaleX),
           y: Math.round(sig.position.y * scaleY),
+          width: Math.round(sig.size.width * scaleX),
+          height: Math.round(sig.size.height * scaleY),
           page: sig.page,
           status,
           documentId: decodeURIComponent(id),
@@ -228,11 +163,13 @@ export default function PdfViewer() {
           signatures
             .filter((s) => s.page === page)
             .map((sig) => (
-              <DraggableSignature
+              <DraggableResizableSignature
                 key={sig.id}
                 sig={sig}
                 updatePosition={updateSignaturePosition}
+                updateSize={updateSignatureSize}
                 deleteSignature={deleteSignature}
+                pdfPageSize={pdfPageSize}
               />
             ))}
       </div>

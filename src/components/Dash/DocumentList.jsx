@@ -88,7 +88,7 @@ const DocumentList = ({ documents, theme }) => {
               {doc.status === "REJECTED" && (
                 <button
                   onClick={() => handleRedirect(doc)}
-                  className="px-4 py-2 bg-orange-400 hover:bg-orange-500 text-white font-semibold rounded-lg transition"
+                  className="px-4 py-2 bg-red-400 hover:bg-orange-500 text-white font-semibold rounded-lg transition"
                 >
                   View & Retry
                 </button>
