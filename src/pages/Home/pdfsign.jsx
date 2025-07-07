@@ -146,8 +146,8 @@ export default function PdfViewer() {
       <div
         ref={containerRef}
         className="relative border bg-white shadow-md overflow-auto w-full lg:w-2/3"
-        style={{ minHeight: "90vh" }}
-      >
+         style={{ minHeight: "90vh" }}> // or 60vh if preferred
+
         <Document file={pdfUrl} onLoadSuccess={onDocumentLoadSuccess}>
           <Page
             pageNumber={page}
