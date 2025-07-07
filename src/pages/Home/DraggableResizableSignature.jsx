@@ -13,7 +13,7 @@ export default function DraggableResizableSignature({
   const dragOffset = useRef({ x: 0, y: 0 });
   const resizeStart = useRef({ w: 0, h: 0, x: 0, y: 0 });
 
-  // Drag logic
+  // --- MOUSE DRAG ---
   const onMouseDownDrag = (e) => {
     if (e.button !== 0) return;
     isDragging.current = true;
@@ -38,7 +38,35 @@ export default function DraggableResizableSignature({
     document.removeEventListener("mouseup", onMouseUpDrag);
   };
 
-  // Resize logic
+  // --- TOUCH DRAG ---
+  const onTouchStartDrag = (e) => {
+    if (e.touches.length !== 1) return;
+    isDragging.current = true;
+    const touch = e.touches[0];
+    dragOffset.current = {
+      x: touch.clientX - sig.position.x,
+      y: touch.clientY - sig.position.y,
+    };
+    document.addEventListener("touchmove", onTouchMoveDrag, { passive: false });
+    document.addEventListener("touchend", onTouchEndDrag);
+  };
+  const onTouchMoveDrag = (e) => {
+    if (!isDragging.current || e.touches.length !== 1) return;
+    e.preventDefault(); // Prevent scrolling while dragging
+    const touch = e.touches[0];
+    let x = touch.clientX - dragOffset.current.x;
+    let y = touch.clientY - dragOffset.current.y;
+    x = Math.max(0, Math.min(x, pdfPageSize.width - sig.size.width));
+    y = Math.max(0, Math.min(y, pdfPageSize.height - sig.size.height));
+    updatePosition(sig.id, { x, y });
+  };
+  const onTouchEndDrag = () => {
+    isDragging.current = false;
+    document.removeEventListener("touchmove", onTouchMoveDrag);
+    document.removeEventListener("touchend", onTouchEndDrag);
+  };
+
+  // --- MOUSE RESIZE ---
   const onMouseDownResize = (e) => {
     e.stopPropagation();
     isResizing.current = true;
@@ -65,6 +93,37 @@ export default function DraggableResizableSignature({
     document.removeEventListener("mouseup", onMouseUpResize);
   };
 
+  // --- TOUCH RESIZE ---
+  const onTouchStartResize = (e) => {
+    e.stopPropagation();
+    if (e.touches.length !== 1) return;
+    isResizing.current = true;
+    const touch = e.touches[0];
+    resizeStart.current = {
+      w: sig.size.width,
+      h: sig.size.height,
+      x: touch.clientX,
+      y: touch.clientY,
+    };
+    document.addEventListener("touchmove", onTouchMoveResize, { passive: false });
+    document.addEventListener("touchend", onTouchEndResize);
+  };
+  const onTouchMoveResize = (e) => {
+    if (!isResizing.current || e.touches.length !== 1) return;
+    e.preventDefault();
+    const touch = e.touches[0];
+    let newWidth = resizeStart.current.w + (touch.clientX - resizeStart.current.x);
+    let newHeight = resizeStart.current.h + (touch.clientY - resizeStart.current.y);
+    newWidth = Math.max(40, Math.min(newWidth, pdfPageSize.width - sig.position.x));
+    newHeight = Math.max(24, Math.min(newHeight, pdfPageSize.height - sig.position.y));
+    updateSize(sig.id, { width: newWidth, height: newHeight });
+  };
+  const onTouchEndResize = () => {
+    isResizing.current = false;
+    document.removeEventListener("touchmove", onTouchMoveResize);
+    document.removeEventListener("touchend", onTouchEndResize);
+  };
+
   // Auto-fit to text on mount
   const textRef = useRef(null);
   useLayoutEffect(() => {
@@ -82,6 +141,7 @@ export default function DraggableResizableSignature({
     <div
       ref={dragRef}
       onMouseDown={onMouseDownDrag}
+      onTouchStart={onTouchStartDrag}
       style={{
         position: "absolute",
         left: sig.position.x,
@@ -97,6 +157,7 @@ export default function DraggableResizableSignature({
         alignItems: "center",
         userSelect: "none",
         padding: 0,
+        touchAction: "none", // Prevents default scroll/zoom on mobile while dragging
       }}
     >
       {/* Signature text */}
@@ -144,6 +205,7 @@ export default function DraggableResizableSignature({
       {/* Resize handle (bottom right) */}
       <div
         onMouseDown={onMouseDownResize}
+        onTouchStart={onTouchStartResize}
         style={{
           position: "absolute",
           right: 0,
@@ -159,6 +221,7 @@ export default function DraggableResizableSignature({
           alignItems: "flex-end",
           justifyContent: "flex-end",
           padding: 2,
+          touchAction: "none",
         }}
         title="Resize signature"
       >
