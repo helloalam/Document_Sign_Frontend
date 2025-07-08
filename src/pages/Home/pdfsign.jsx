@@ -145,12 +145,8 @@ export default function PdfViewer() {
       {/* PDF Preview */}
       <div
         ref={containerRef}
-        className={`relative border bg-white shadow-md overflow-auto w-full lg:w-2/3 ${isMobile ? 'pdf-mobile-fullscreen' : ''}`}
-        style={{
-          minHeight: isMobile ? '100vh' : containerHeight,
-          height: isMobile ? '100vh' : undefined,
-          maxHeight: isMobile ? '100vh' : undefined,
-        }}
+        className="relative border bg-white shadow-md overflow-auto w-full lg:w-2/3"
+        style={{ minHeight: "90vh" }}
       >
         <Document file={pdfUrl} onLoadSuccess={onDocumentLoadSuccess}>
           <Page
