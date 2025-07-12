@@ -2,6 +2,7 @@ import React, { useRef, useLayoutEffect } from "react";
 
 export default function DraggableResizableSignature({
   sig,
+  isImage,
   updatePosition,
   updateSize,
   deleteSignature,
@@ -124,10 +125,14 @@ export default function DraggableResizableSignature({
     document.removeEventListener("touchend", onTouchEndResize);
   };
 
-  // Auto-fit to text on mount
+  // Auto-fit to text on mount (only for text signatures)
   const textRef = useRef(null);
   useLayoutEffect(() => {
-    if (textRef.current && (!sig.size.width || !sig.size.height)) {
+    if (
+      !isImage &&
+      textRef.current &&
+      (!sig.size.width || !sig.size.height)
+    ) {
       const rect = textRef.current.getBoundingClientRect();
       updateSize(sig.id, {
         width: rect.width + 24,
@@ -158,23 +163,41 @@ export default function DraggableResizableSignature({
         userSelect: "none",
         padding: 0,
         touchAction: "none", // Prevents default scroll/zoom on mobile while dragging
+        overflow: "hidden",
       }}
     >
-      {/* Signature text */}
-      <span
-        ref={textRef}
-        style={{
-          fontSize: sig.fontSize,
-          fontFamily: sig.fontFamily,
-          padding: "4px 10px",
-          flex: 1,
-          whiteSpace: "pre",
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-        }}
-      >
-        {sig.text}
-      </span>
+      {/* Signature image or text */}
+      {isImage ? (
+        <img
+          src={sig.imageData}
+          alt="Signature"
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "contain",
+            pointerEvents: "none",
+            userSelect: "none",
+          }}
+          draggable={false}
+        />
+      ) : (
+        <span
+          ref={textRef}
+          style={{
+            fontSize: sig.fontSize,
+            fontFamily: sig.fontFamily,
+            padding: "4px 10px",
+            flex: 1,
+            whiteSpace: "pre",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            userSelect: "none",
+            pointerEvents: "none",
+          }}
+        >
+          {sig.text}
+        </span>
+      )}
 
       {/* Delete icon (top right, away from resize handle) */}
       <button

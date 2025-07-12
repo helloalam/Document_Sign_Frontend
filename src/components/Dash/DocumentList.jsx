@@ -1,7 +1,8 @@
-import React, { useState } from "react";
-import { FileIcon, Eye, Download, Send, X } from "lucide-react";
+import React, { useState,useEffect } from "react";
+import { FileIcon, Eye, Download, Send, X, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
+import API from "../../utils/api"; // if not already imported
 
 const DocumentList = ({ documents, theme }) => {
   const navigate = useNavigate();
@@ -9,6 +10,12 @@ const DocumentList = ({ documents, theme }) => {
   const [showModal, setShowModal] = useState(false);
   const [email, setEmail] = useState("");
   const [selectedFileUrl, setSelectedFileUrl] = useState("");
+  const [localDocs, setLocalDocs] = useState(documents);
+   // ✅ Sync localDocs with latest props
+  useEffect(() => {
+    setLocalDocs(documents);
+  }, [documents]);
+
 
   const openEmailModal = (fileUrl) => {
     setSelectedFileUrl(fileUrl);
@@ -17,46 +24,57 @@ const DocumentList = ({ documents, theme }) => {
 
   const sendEmail = async () => {
     if (!email) return toast.error("Email is required!");
-
     try {
-      const res = await fetch(`${process.env.REACT_APP_API_BASE_URL}/pdf/email`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fileUrl: selectedFileUrl, toEmail: email }),
+      const res = await API.post("/pdf/email", {
+        fileUrl: selectedFileUrl,
+        toEmail: email,
       });
 
-      if (!res.ok) {
-        const text = await res.text();
-        console.error("Response not OK. HTML content:", text);
-        return toast.error("Email sending failed. Check console.");
-      }
-
-      const data = await res.json();
-
-      if (data.success) {
-        toast.success("Email sent successfully!");
+      if (res.data.success) {
+        toast.success("Email sent!");
         setShowModal(false);
         setEmail("");
-      } else {
-        toast.error(data.message || "Failed to send email.");
-      }
+      } else toast.error(res.data.message || "Failed to send email");
     } catch (err) {
-      console.error("Error sending email:", err);
-      toast.error("Error sending email.");
+      toast.error("Error sending email");
     }
   };
 
   const handleRedirect = (doc) => {
-    if (doc.documentId) {
-      navigate(`/sign/${encodeURIComponent(doc.documentId)}`);
-    }
+    if (doc.documentId) navigate(`/sign/${encodeURIComponent(doc.documentId)}`);
   };
+
+const handleDelete = async (docId) => {
+  if (!window.confirm("Are you sure you want to delete this document?")) return;
+
+  try {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      toast.error("No token found. Please login again.");
+      return;
+    }
+
+    await API.delete(`/pdf/delete/${docId}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    setLocalDocs(prev => prev.filter(d => d.documentId !== docId));
+    toast.success("Document deleted");
+  } catch (err) {
+    toast.error(
+      err?.response?.data?.message || "Failed to delete document"
+    );
+  }
+};
+
 
   return (
     <div>
       <h2 className="text-xl font-semibold mb-4">Your Documents</h2>
       <div className="space-y-4">
-        {documents.map((doc, index) => (
+        {localDocs.map((doc, index) => (
           <div
             key={index}
             className={`flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 rounded-lg border transition hover:shadow-lg ${
@@ -65,13 +83,18 @@ const DocumentList = ({ documents, theme }) => {
                 : "border-gray-200 hover:bg-gray-50"
             }`}
           >
-            <div className="flex items-center mb-4 sm:mb-0">
+            <div className="flex items-start gap-4 mb-4 sm:mb-0 w-full sm:w-auto">
               <FileIcon className={`${theme.accent}`} size={28} />
-              <div className="ml-4">
+              <div>
                 <p className="font-medium">{doc.name || "Untitled Document"}</p>
-                <span className={`text-xs font-semibold ${doc.statusColor}`}>
+                <p className={`text-xs font-semibold ${doc.statusColor}`}>
                   {doc.status}
-                </span>
+                </p>
+                {doc.timestamp && (
+                  <p className="text-xs text-gray-400 mt-1">
+                    {new Date(doc.timestamp).toLocaleString()}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -86,12 +109,21 @@ const DocumentList = ({ documents, theme }) => {
               )}
 
               {doc.status === "REJECTED" && (
-                <button
-                  onClick={() => handleRedirect(doc)}
-                  className="px-4 py-2 bg-red-400 hover:bg-orange-500 text-white font-semibold rounded-lg transition"
-                >
-                  View & Retry
-                </button>
+                <>
+                  <button
+                    onClick={() => handleRedirect(doc)}
+                    className="px-4 py-2 bg-red-400 hover:bg-orange-500 text-white font-semibold rounded-lg transition"
+                  >
+                    View & Retry
+                  </button>
+                  <button
+                    onClick={() => handleDelete(doc.documentId)}
+                    className="text-red-500 hover:text-red-700"
+                    title="Delete Document"
+                  >
+                    <Trash2 size={20} />
+                  </button>
+                </>
               )}
 
               {doc.status === "SIGNED" && (
@@ -121,10 +153,11 @@ const DocumentList = ({ documents, theme }) => {
                     <Send size={20} />
                   </button>
                   <button
-                    disabled
-                    className="px-4 py-2 bg-gray-300 text-white font-semibold rounded-lg cursor-not-allowed"
+                    onClick={() => handleDelete(doc.documentId)}
+                    className="text-red-500 hover:text-red-700"
+                    title="Delete Document"
                   >
-                    Completed
+                    <Trash2 size={20} />
                   </button>
                 </>
               )}

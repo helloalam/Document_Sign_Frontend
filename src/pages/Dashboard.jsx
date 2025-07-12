@@ -1,4 +1,3 @@
-// src/pages/Dashboard.jsx
 import React, { useEffect, useState } from "react";
 import { Search, FileText, CheckCircle, Clock } from "lucide-react";
 import StatCard from "../components/Dash/StarCard"; // make sure file name is correct
@@ -38,24 +37,48 @@ const Dashboard = () => {
     doc.documentId?.toLowerCase().includes(search.toLowerCase())
   );
 
-  const mappedDocs = filteredDocs.map((doc) => ({
+  // ✅ Deduplicate by documentId with priority: signed > rejected > needs to sign
+  const docMap = new Map();
+  const statusPriority = {
+    signed: 3,
+    rejected: 2,
+    "needs to sign": 1,
+  };
+
+  filteredDocs.forEach((doc) => {
+    const current = docMap.get(doc.documentId);
+    const docStatus = doc.status.toLowerCase();
+
+    if (
+      !current ||
+      statusPriority[docStatus] > statusPriority[current.status.toLowerCase()]
+    ) {
+      docMap.set(doc.documentId, doc);
+    }
+  });
+
+  const dedupedDocs = Array.from(docMap.values());
+
+  // ✅ Correct stats based on deduped documents
+  const stats = {
+    total: dedupedDocs.length,
+    signed: dedupedDocs.filter((d) => d.status.toLowerCase() === "signed").length,
+    pending: dedupedDocs.filter((d) => d.status.toLowerCase() !== "signed").length,
+  };
+
+  // ✅ Map docs for display
+  const mappedDocs = dedupedDocs.map((doc) => ({
     name: doc.documentId || "Untitled.pdf",
     status: doc.status.toUpperCase(),
     documentId: doc.documentId,
     signedUrl: doc.signedUrl,
     statusColor:
-      doc.status === "signed"
+      doc.status.toLowerCase() === "signed"
         ? "text-green-500"
-        : doc.status === "rejected"
+        : doc.status.toLowerCase() === "rejected"
         ? "text-orange-500"
         : "text-red-500",
   }));
-
-  const stats = {
-    total: documents.length,
-    signed: documents.filter((d) => d.status === "signed").length,
-    pending: documents.filter((d) => d.status !== "signed").length,
-  };
 
   return (
     <div className={`min-h-screen ${currentTheme.bg} ${currentTheme.text} p-4 sm:p-6 lg:p-8`}>
@@ -65,14 +88,29 @@ const Dashboard = () => {
           <p className="text-gray-500 mt-1">Manage your documents and signatures.</p>
         </header>
 
-        {/* Summary Cards */}
+        {/* ✅ Summary Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-          <StatCard icon={<FileText size={24} className={currentTheme.accent} />} label="Total Documents" value={stats.total} theme={currentTheme} />
-          <StatCard icon={<CheckCircle size={24} className="text-green-500" />} label="Signed Documents" value={stats.signed} theme={currentTheme} />
-          <StatCard icon={<Clock size={24} className="text-orange-500" />} label="Pending" value={stats.pending} theme={currentTheme} />
+          <StatCard
+            icon={<FileText size={24} className={currentTheme.accent} />}
+            label="Total Documents"
+            value={stats.total}
+            theme={currentTheme}
+          />
+          <StatCard
+            icon={<CheckCircle size={24} className="text-green-500" />}
+            label="Signed Documents"
+            value={stats.signed}
+            theme={currentTheme}
+          />
+          <StatCard
+            icon={<Clock size={24} className="text-orange-500" />}
+            label="Pending"
+            value={stats.pending}
+            theme={currentTheme}
+          />
         </div>
 
-        {/* Search & Documents */}
+        {/* ✅ Search + Document List */}
         <div className={`p-6 rounded-lg shadow-sm ${currentTheme.cardBg}`}>
           <div className="relative mb-6">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />

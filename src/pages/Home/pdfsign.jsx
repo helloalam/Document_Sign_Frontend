@@ -15,6 +15,7 @@ export default function PdfViewer() {
   const { id } = useParams();
   const navigate = useNavigate();
   const containerRef = useRef(null);
+  const fileInputRef = useRef(null);
   const { user } = useContext(AuthContext);
 
   const [pdfUrl, setPdfUrl] = useState("");
@@ -29,6 +30,7 @@ export default function PdfViewer() {
   const [dimensionsReady, setDimensionsReady] = useState(false);
   const [originalPageSizes, setOriginalPageSizes] = useState([]);
   const [containerWidth, setContainerWidth] = useState(800);
+  const [imagePreview, setImagePreview] = useState(null);
 
   useEffect(() => {
     if (id) {
@@ -67,21 +69,54 @@ export default function PdfViewer() {
     setDimensionsReady(true);
   };
 
-  const addSignature = () => {
+  // Add Text Signature
+  const addTextSignature = () => {
     if (!newSignature.trim()) return toast.error("Signature cannot be empty.");
     setSignatures((prev) => [
       ...prev,
       {
         id: Date.now(),
+        type: "text",
         text: newSignature,
         fontSize,
         fontFamily,
         page,
         position: { x: 50, y: 50 },
-        size: { width: 120, height: 40 }, // initial, will auto-fit after mount
+        size: { width: 120, height: 40 },
       },
     ]);
     setNewSignature("");
+  };
+
+  // Add Image Signature
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setImagePreview(event.target.result); // Data URL
+    };
+    reader.readAsDataURL(file);
+    // Reset file input so same file can be selected again
+    e.target.value = null;
+  };
+
+  const addImageSignature = () => {
+    if (!imagePreview) return toast.error("No image selected.");
+    setSignatures((prev) => [
+      ...prev,
+      {
+        id: Date.now(),
+        type: "image",
+        imageData: imagePreview, // Data URL
+        page,
+        position: { x: 50, y: 50 },
+        size: { width: 120, height: 40 },
+      },
+    ]);
+    setImagePreview(null);
+    // Reset file input for next upload
+    if (fileInputRef.current) fileInputRef.current.value = null;
   };
 
   const updateSignaturePosition = (id, position) => {
@@ -98,6 +133,8 @@ export default function PdfViewer() {
 
   const deleteSignature = (id) => {
     setSignatures((prev) => prev.filter((sig) => sig.id !== id));
+    // Reset file input for next upload
+    if (fileInputRef.current) fileInputRef.current.value = null;
   };
 
   const handleSign = async (status) => {
@@ -114,19 +151,24 @@ export default function PdfViewer() {
 
         const payload = {
           pdfUrl,
-          type: "text",
-          text: sig.text,
-          fontSize: Math.round(sig.fontSize * scaleY),
-          fontFamily: sig.fontFamily,
+          type: sig.type,
+          page: sig.page,
           x: Math.round(sig.position.x * scaleX),
           y: Math.round(sig.position.y * scaleY),
           width: Math.round(sig.size.width * scaleX),
           height: Math.round(sig.size.height * scaleY),
-          page: sig.page,
           status,
           documentId: decodeURIComponent(id),
           userId: user._id,
         };
+
+        if (sig.type === "text") {
+          payload.text = sig.text;
+          payload.fontSize = Math.round(sig.fontSize * scaleY);
+          payload.fontFamily = sig.fontFamily;
+        } else if (sig.type === "image") {
+          payload.imageData = sig.imageData;
+        }
 
         await API.post(`/pdf/sign/${encodeURIComponent(id)}`, payload);
       }
@@ -146,8 +188,8 @@ export default function PdfViewer() {
       <div
         ref={containerRef}
         className="relative border bg-white shadow-md overflow-auto w-full lg:w-2/3"
-         style={{ minHeight: "60vh" }}> 
-
+        style={{ minHeight: "60vh" }}
+      >
         <Document file={pdfUrl} onLoadSuccess={onDocumentLoadSuccess}>
           <Page
             pageNumber={page}
@@ -166,6 +208,7 @@ export default function PdfViewer() {
               <DraggableResizableSignature
                 key={sig.id}
                 sig={sig}
+                isImage={sig.type === "image"}
                 updatePosition={updateSignaturePosition}
                 updateSize={updateSignatureSize}
                 deleteSignature={deleteSignature}
@@ -176,8 +219,9 @@ export default function PdfViewer() {
 
       {/* Control Panel */}
       <div className="w-full lg:w-1/3 mt-4 lg:mt-0 lg:pl-6 space-y-4">
+        {/* Text Signature */}
         <div>
-          <label className="block font-medium">New Signature</label>
+          <label className="block font-medium">New Text Signature</label>
           <input
             type="text"
             value={newSignature}
@@ -193,8 +237,41 @@ export default function PdfViewer() {
               {newSignature || <span className="text-gray-400">Signature will appear here</span>}
             </div>
           </div>
+          <button
+            onClick={addTextSignature}
+            className="w-full bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 mt-2"
+          >
+            Add Text Signature
+          </button>
         </div>
 
+        {/* Image Signature */}
+        <div>
+          <label className="block font-medium">Upload Image Signature</label>
+          <input
+            type="file"
+            accept="image/*"
+            ref={fileInputRef}
+            onChange={handleImageUpload}
+            className="w-full border px-3 py-2 rounded"
+          />
+          {imagePreview && (
+            <div className="mt-2">
+              <label className="text-sm text-gray-600">Image Preview:</label>
+              <div className="border px-4 py-2 mt-1 rounded bg-white shadow-sm flex items-center justify-center" style={{ minHeight: "40px" }}>
+                <img src={imagePreview} alt="Signature Preview" style={{ maxHeight: 60, maxWidth: 200 }} />
+              </div>
+              <button
+                onClick={addImageSignature}
+                className="w-full bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 mt-2"
+              >
+                Add Image Signature
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Font and Page Controls */}
         <div>
           <label className="block font-medium">Font Family</label>
           <select
@@ -241,13 +318,7 @@ export default function PdfViewer() {
           </select>
         </div>
 
-        <button
-          onClick={addSignature}
-          className="w-full bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-        >
-          Add Signature
-        </button>
-
+        {/* Sign/Reject Buttons */}
         <div className="flex gap-3 pt-4">
           <button
             onClick={() => handleSign("signed")}
